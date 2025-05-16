@@ -365,9 +365,12 @@ def dashboard(request):
     total_validations = Observation.objects.filter(user=request.user).aggregate(
         total=Count('community_validations'))['total'] or 0
     
-    # Get observations that need validation (excluding user's own observations)
+    # Get observations that need validation (excluding user's own observations and already validated ones)
+    validated_observation_ids = [k.split('_')[1] for k in request.session.keys() if k.startswith('validated_')]
     observations_needing_validation = Observation.objects.exclude(
         user=request.user
+    ).exclude(
+        id__in=validated_observation_ids
     ).order_by('-created_at')[:5]
     
     # Get user's badge
@@ -460,6 +463,9 @@ def home(request):
 
     # Featured: top 5 by validations
     featured_observations = Observation.objects.order_by('-community_validations', '-created_at')[:5]
+    # Batch featured observations into pairs
+    featured_observation_pairs = [featured_observations[i:i + 2] for i in range(0, len(featured_observations), 2)]
+    
     # Recent: latest 6
     recent_observations = Observation.objects.order_by('-created_at')[:6]
 
@@ -474,7 +480,7 @@ def home(request):
         .order_by('-observations_count')[:5]
     )
     context = {
-        'featured_observations': featured_observations,
+        'featured_observation_pairs': featured_observation_pairs,
         'recent_observations': recent_observations,
         'top_validators': top_validators,
         'top_observers': top_observers,

@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title text-success mb-3">
+                        <i class="bi bi-person-circle"></i> Dashboard
+                    </h5>
+                    <div class="list-group">
+                        <a href="{% url 'home' %}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-house-door"></i> Home
+                        </a>
+                        <a href="{% url 'submit_observation' %}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-plus-circle"></i> New Observation
+                        </a>
+                        <a href="#my-observations" class="list-group-item list-group-item-action active">
+                            <i class="bi bi-collection"></i> My Observations
+                        </a>
+                        <a href="#validations" class="list-group-item list-group-item-action">
+                            <i class="bi bi-check-circle"></i> Validations
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 col-lg-10">
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-success text-white shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-binoculars"></i> Total Observations
+                            </h5>
+                            <h2 class="mb-0">{{ user_observations_count }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-info text-white shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-check-circle"></i> Validations Received
+                            </h5>
+                            <h2 class="mb-0">{{ total_validations }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning text-dark shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-trophy"></i> Badge
+                            </h5>
+                            <h2 class="mb-0">{{ badge|default:"Novice" }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Observations -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title text-success mb-3">
+                        <i class="bi bi-collection"></i> My Recent Observations
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-success">
+                                <tr>
+                                    <th>Species</th>
+                                    <th>AI Species ID</th>
+                                    <th>Confidence</th>
+                                    <th>Date</th>
+                                    <th>Location</th>
+                                    <th>Image</th>
+                                    <th>Validations</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for obs in user_observations %}
+                                <tr>
+                                    <td>{{ obs.species_name }}</td>
+                                    <td>{{ obs.ai_suggestion }}</td>
+                                    <td>{% if obs.ai_confidence %}{{ obs.ai_confidence|floatformat:2 }}{% endif %}</td>
+                                    <td>{{ obs.date_observed }}</td>
+                                    <td>{{ obs.location }}</td>
+                                    <td>
+                                        {% if obs.image %}
+                                            <img src="{{ obs.image.url }}" alt="Image" width="60" class="rounded"/>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ obs.community_validations }}</span>
+                                    </td>
+                                    <td>
+                                        {% if obs.ai_confidence and obs.ai_confidence > 0.9 %}
+                                            <span class="badge bg-primary">Verified</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validations Needed -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-success mb-3">
+                        <i class="bi bi-check-circle"></i> Observations Needing Validation
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-success">
+                                <tr>
+                                    <th>Species</th>
+                                    <th>Observer</th>
+                                    <th>Date</th>
+                                    <th>Image</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for obs in observations_needing_validation %}
+                                <tr>
+                                    <td>{{ obs.species_name }}</td>
+                                    <td>{{ obs.user }}</td>
+                                    <td>{{ obs.date_observed }}</td>
+                                    <td>
+                                        {% if obs.image %}
+                                            <img src="{{ obs.image.url }}" alt="Image" width="60" class="rounded"/>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="post" action="{% url 'validate_observation' obs.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-success btn-sm">
+                                                <i class="bi bi-hand-thumbs-up"></i> Validate
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

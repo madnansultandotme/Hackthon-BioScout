@@ -6,7 +6,7 @@ from observations.views import popular_observations
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path('', popular_observations, name='popular_observations'),
+    path('popular/', popular_observations, name='popular_observations'),
     path('register/', register_view, name='register'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),

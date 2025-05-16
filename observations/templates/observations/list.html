@@ -1,61 +1,133 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
-<div class="container mt-5">
-    <div class="card shadow mb-4">
-        <div class="card-body bg-light">
-            <h2 class="card-title text-success"><i class="bi bi-binoculars"></i> {% if request.session.language == 'ur' %}تمام مشاہدات{% else %}All Observations{% endif %}</h2>
-            {% if badge %}
-                <div class="alert alert-success">{% if request.session.language == 'ur' %}مبارک ہو! آپ <strong>{{ badge }}</strong> ہیں ({{ user_count }} مشاہدات){% else %}Congratulations! You are a <strong>{{ badge }}</strong> ({{ user_count }} submissions){% endif %}</div>
-            {% endif %}
-            {% if user.is_authenticated %}
-            <a href="{% url 'submit_observation' %}" class="btn btn-success mb-3"><i class="bi bi-plus-circle"></i> {% if request.session.language == 'ur' %}نیا مشاہدہ جمع کریں{% else %}Submit New Observation{% endif %}</a>
-            {% endif %}
-            <table class="table table-bordered table-striped align-middle shadow">
-                <thead class="table-success">
-                    <tr>
-                        <th>{% if request.session.language == 'ur' %}نام{% else %}Species Name{% endif %}</th>
-                        <th>{% if request.session.language == 'ur' %}تاریخ{% else %}Date{% endif %}</th>
-                        <th>{% if request.session.language == 'ur' %}مقام{% else %}Location{% endif %}</th>
-                        <th>{% if request.session.language == 'ur' %}تصویر{% else %}Image{% endif %}</th>
-                        <th>{% if request.session.language == 'ur' %}نوٹس{% else %}Notes{% endif %}</th>
-                        <th>{% if request.session.language == 'ur' %}AI تجویز{% else %}AI Suggestion <span class="badge bg-info">AI</span>{% endif %}</th>
-                        <th>{% if request.session.language == 'ur' %}اعتماد{% else %}Confidence{% endif %}</th>
-                        <th>{% if request.session.language == 'ur' %}مشاہدہ کار{% else %}Observer{% endif %}</th>
-                        <th>{% if request.session.language == 'ur' %}کمیونٹی توثیق{% else %}Community Validations <span class="badge bg-warning text-dark">New</span>{% endif %}</th>
-                        <th>{% if request.session.language == 'ur' %}عمل{% else %}Action{% endif %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for obs in observations %}
-                    <tr {% if obs.ai_confidence and obs.ai_confidence > 0.9 %}class="table-primary"{% endif %}>
-                        <td><strong>{{ obs.species_name }}</strong></td>
-                        <td>{{ obs.date_observed }}</td>
-                        <td>{{ obs.location }}</td>
-                        <td>
-                            {% if obs.image %}
-                                <img src="{{ obs.image.url }}" alt="Image" width="80" class="rounded shadow"/>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>{{ obs.notes }}</td>
-                        <td><span class="text-primary">{{ obs.ai_suggestion }}</span></td>
-                        <td>{% if obs.ai_confidence %}<span class="badge bg-secondary">{{ obs.ai_confidence|floatformat:2 }}</span>{% endif %}</td>
-                        <td>{{ obs.user }}</td>
-                        <td><span class="badge bg-success">{{ obs.community_validations }}</span></td>
-                        <td>
-                            {% if user.is_authenticated %}
-                            <form method="post" action="{% url 'validate_observation' obs.pk %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-hand-thumbs-up"></i> {% if request.session.language == 'ur' %}توثیق کریں{% else %}Validate{% endif %}</button>
-                            </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<!-- Hero Section -->
+<div class="bg-success text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h1 class="display-4 fw-bold mb-4">
+                    <i class="bi bi-binoculars"></i> BioScout
+                </h1>
+                <p class="lead mb-4">Join our community of nature enthusiasts and contribute to biodiversity research through citizen science.</p>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg me-3">
+                        <i class="bi bi-speedometer2"></i> Go to Dashboard
+                    </a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn btn-light btn-lg me-3">
+                        <i class="bi bi-box-arrow-in-right"></i> Get Started
+                    </a>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <img src="{% static 'images/nature-hero.jpg' %}" alt="Nature" class="img-fluid rounded shadow-lg">
+            </div>
         </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="container my-5">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-camera text-success display-4 mb-3"></i>
+                    <h3 class="card-title">Capture</h3>
+                    <p class="card-text">Take photos of plants and animals you encounter in nature.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-robot text-success display-4 mb-3"></i>
+                    <h3 class="card-title">AI Analysis</h3>
+                    <p class="card-text">Get instant species identification with our advanced AI technology.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-people text-success display-4 mb-3"></i>
+                    <h3 class="card-title">Community</h3>
+                    <p class="card-text">Connect with other nature enthusiasts and validate observations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Observations Section -->
+<div class="container mb-5">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title text-success mb-4">
+                <i class="bi bi-clock-history"></i> Recent Observations
+            </h2>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-success">
+                        <tr>
+                            <th>Species</th>
+                            <th>AI Species ID</th>
+                            <th>Confidence</th>
+                            <th>Date</th>
+                            <th>Location</th>
+                            <th>Image</th>
+                            <th>Observer</th>
+                            <th>Validations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for obs in observations %}
+                        <tr>
+                            <td><strong>{{ obs.species_name }}</strong></td>
+                            <td>{{ obs.ai_suggestion }}</td>
+                            <td>{% if obs.ai_confidence %}{{ obs.ai_confidence|floatformat:2 }}{% endif %}</td>
+                            <td>{{ obs.date_observed }}</td>
+                            <td>{{ obs.location }}</td>
+                            <td>
+                                {% if obs.image %}
+                                    <img src="{{ obs.image.url }}" alt="Image" width="80" class="rounded shadow-sm"/>
+                                {% endif %}
+                            </td>
+                            <td>{{ obs.user }}</td>
+                            <td>
+                                <span class="badge bg-success">{{ obs.community_validations }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if user.is_authenticated %}
+                <div class="text-center mt-4">
+                    <a href="{% url 'submit_observation' %}" class="btn btn-success btn-lg">
+                        <i class="bi bi-plus-circle"></i> Submit New Observation
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Call to Action -->
+<div class="bg-light py-5">
+    <div class="container text-center">
+        <h2 class="mb-4">Ready to Start Exploring?</h2>
+        <p class="lead mb-4">Join our community of citizen scientists and contribute to biodiversity research.</p>
+        {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}" class="btn btn-success btn-lg">
+                <i class="bi bi-speedometer2"></i> Go to Dashboard
+            </a>
+        {% else %}
+            <a href="{% url 'login' %}" class="btn btn-success btn-lg">
+                <i class="bi bi-box-arrow-in-right"></i> Get Started
+            </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %} 

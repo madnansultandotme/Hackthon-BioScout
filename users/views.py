@@ -66,6 +66,7 @@ def register_view(request):
 
 # Web login view
 def login_view(request):
+    next_url = request.GET.get('next') or request.POST.get('next')
     if request.method == 'POST':
         form = CustomLoginForm(request.POST)
         if form.is_valid():
@@ -75,6 +76,8 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, 'Login successful!')
+                if next_url:
+                    return redirect(next_url)
                 return redirect('profile')
             else:
                 messages.error(request, 'Invalid username or password')

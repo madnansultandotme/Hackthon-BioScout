@@ -25,6 +25,17 @@ from django.urls import reverse
 import requests
 from users.models import User
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from langchain_ollama import OllamaEmbeddings, OllamaLLM
+from langchain_core.vectorstores import InMemoryVectorStore
+from langchain_core.documents import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.prompts import ChatPromptTemplate
+import timm
+import torch
+from PIL import Image
+from torchvision import transforms
+import tempfile
 
 User = get_user_model()
 
@@ -60,15 +71,66 @@ class ObservationDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         return context
 
+# Load the iNaturalist model and label mapping once
+try:
+    inat_model = timm.create_model('vit_large_patch14_clip_336.laion2b_ft_augreg_inat21', pretrained=True)
+    inat_model.eval()
+    # Load label mapping (should be a list of species names, one per line)
+    LABELS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'inat21_labels.txt')
+    with open(LABELS_PATH, encoding='utf-8') as f:
+        inat_labels = [line.strip() for line in f if line.strip()]
+except Exception as e:
+    inat_model = None
+    inat_labels = []
+
+inat_preprocess = transforms.Compose([
+    transforms.Resize(384),
+    transforms.CenterCrop(384),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5], std=[0.5])
+])
+
+def get_species_ai_suggestion(image_path):
+    if inat_model is not None and inat_labels:
+        try:
+            image = Image.open(image_path).convert('RGB')
+            input_tensor = inat_preprocess(image).unsqueeze(0)
+            with torch.no_grad():
+                output = inat_model(input_tensor)
+            predicted_class = output.argmax().item()
+            species_name = inat_labels[predicted_class] if predicted_class < len(inat_labels) else f"Class {predicted_class}"
+            confidence = torch.softmax(output, dim=1)[0, predicted_class].item()
+            return (species_name, confidence)
+        except Exception as e:
+            pass  # fallback to mock
+    return get_mock_ai_suggestion()
+
 @method_decorator(login_required, name='dispatch')
 class ObservationCreateView(CreateView):
     model = Observation
     form_class = ObservationForm
     template_name = 'observations/submit.html'
-    success_url = reverse_lazy('observation_list')
+    success_url = reverse_lazy('home')
 
     def form_valid(self, form):
         form.instance.user = self.request.user
+        # Use real model if image is present
+        if self.request.FILES.get('image'):
+            image = self.request.FILES['image']
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image.name)[-1]) as temp_file:
+                for chunk in image.chunks():
+                    temp_file.write(chunk)
+                temp_path = temp_file.name
+            try:
+                suggestion, confidence = get_species_ai_suggestion(temp_path)
+            finally:
+                os.remove(temp_path)
+            form.instance.ai_suggestion = suggestion
+            form.instance.ai_confidence = confidence
+        else:
+            suggestion, confidence = get_mock_ai_suggestion()
+            form.instance.ai_suggestion = suggestion
+            form.instance.ai_confidence = confidence
         messages.success(self.request, 'Observation submitted successfully!')
         return super().form_valid(form)
 
@@ -101,21 +163,29 @@ def popular_observations(request):
 @require_POST
 def validate_observation(request, pk):
     observation = get_object_or_404(Observation, pk=pk)
-    user = request.user
-    # Use community_validations integer field
-    validated = request.session.get(f'validated_{pk}', False)
-    if not validated:
-        observation.community_validations += 1
-        observation.save()
-        request.session[f'validated_{pk}'] = True
-        # Award badge to validator
-        if not user.badge or 'Validator' not in user.badge:
-            user.badge = (user.badge + ', ' if user.badge else '') + 'Validator'
-            user.save()
-        messages.success(request, 'Thank you for validating this observation!')
-    else:
+    
+    # Check if user is trying to validate their own observation
+    if request.user == observation.user:
+        messages.error(request, "You cannot validate your own observation.")
+        return HttpResponseRedirect(reverse('observation_detail', args=[pk]))
+    
+    # Check if user has already validated this observation
+    if request.session.get(f'validated_{pk}', False):
         messages.info(request, 'You have already validated this observation.')
-    return HttpResponseRedirect(reverse('observation_list'))
+        return HttpResponseRedirect(reverse('observation_detail', args=[pk]))
+    
+    # Process validation
+    observation.community_validations += 1
+    observation.save()
+    request.session[f'validated_{pk}'] = True
+    
+    # Award badge to validator
+    if not request.user.badge or 'Validator' not in request.user.badge:
+        request.user.badge = (request.user.badge + ', ' if request.user.badge else '') + 'Validator'
+        request.user.save()
+    
+    messages.success(request, 'Thank you for validating this observation!')
+    return HttpResponseRedirect(reverse('observation_detail', args=[pk]))
 
 # API Views
 class ObservationListCreateAPI(generics.ListCreateAPIView):
@@ -125,7 +195,18 @@ class ObservationListCreateAPI(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        suggestion, confidence = get_mock_ai_suggestion()
+        image = self.request.FILES.get('image')
+        if image:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image.name)[-1]) as temp_file:
+                for chunk in image.chunks():
+                    temp_file.write(chunk)
+                temp_path = temp_file.name
+            try:
+                suggestion, confidence = get_species_ai_suggestion(temp_path)
+            finally:
+                os.remove(temp_path)
+        else:
+            suggestion, confidence = get_mock_ai_suggestion()
         serializer.save(user=self.request.user, ai_suggestion=suggestion, ai_confidence=confidence)
 
 class ObservationDetailAPI(generics.RetrieveAPIView):
@@ -137,7 +218,7 @@ RAG_SNIPPETS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ra
 RAG_FAQ_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'faq_examples.txt')
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "deepseek-r1:1.5b"  # or 'deepseek-r1' if available:b
+OLLAMA_MODEL = "llama3.2:1b"  # or 'deepseek-r1' if available:b
 # Helper to get context from knowledge base
 
 def get_rag_context(query):
@@ -171,13 +252,161 @@ def ollama_rag_qa(query):
         else:
             return f"[Ollama error: {response.status_code}] {context}"
     except Exception as e:
-        return f"[LLM unavailable, fallback] {context}"
+        return f"{context}"
 
-from django.views.decorators.csrf import csrf_exempt
+EMBEDDING_MODEL = "nomic-embed-text"
+LLM_MODEL = "llama3.2:1b"
+SYSTEM_PROMPT = """
+You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
+Question: {question} 
+Context: {context} 
+Answer:
+"""
+
+# Initialize once (for demo, in production use a persistent store)
+embeddings = OllamaEmbeddings(model=EMBEDDING_MODEL, base_url="http://localhost:11434")
+llm = OllamaLLM(model=LLM_MODEL, base_url="http://localhost:11434", temperature=0.3, timeout=180)
+vector_store = InMemoryVectorStore(embeddings)
+prompt = ChatPromptTemplate.from_template(SYSTEM_PROMPT)
+
+# Load your knowledge base (e.g., from text files)
+def load_knowledge_base():
+    kb_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'snippets.txt')
+    with open(kb_path, encoding='utf-8') as f:
+        docs = [Document(page_content=line.strip()) for line in f if line.strip()]
+    vector_store.add_documents(docs)
+
+load_knowledge_base()
+
+def ollama_rag_qa_web(question):
+    docs = vector_store.similarity_search(question, k=5)
+    context = "\n\n".join([doc.page_content for doc in docs])
+    chain = prompt | llm
+    return chain.invoke({"question": question, "context": context})
+
+LIBRETRANSLATE_URL = "http://localhost:5000/translate"
+
+def libretranslate(text, source_lang="auto", target_lang="en"):
+    try:
+        response = requests.post(
+            LIBRETRANSLATE_URL,
+            data={
+                "q": text,
+                "source": source_lang,
+                "target": target_lang,
+                "format": "text"
+            },
+            timeout=5
+        )
+        if response.status_code == 200:
+            return response.json().get("translatedText", text)
+        else:
+            return text
+    except Exception:
+        return text
+
+@csrf_exempt
+def rag_qa_ajax(request):
+    if request.method == 'POST':
+        question = request.POST.get('question', '').strip()
+        if not question:
+            return JsonResponse({'error': 'No question provided.'}, status=400)
+        if 'chat_history' not in request.session:
+            request.session['chat_history'] = []
+        chat_history = request.session['chat_history']
+        chat_history.append({'role': 'user', 'content': question})
+        try:
+            answer = ollama_rag_qa_web(question)
+            user_lang = request.session.get('language', 'en')
+            if user_lang == 'ur':
+                translated = libretranslate(answer, source_lang="en", target_lang="ur")
+                if translated != answer:
+                    answer = translated
+        except Exception as e:
+            answer = f"[Error: {str(e)}] Please ensure Ollama is running."
+        chat_history.append({'role': 'bot', 'content': answer})
+        request.session['chat_history'] = chat_history
+        return JsonResponse({'answer': answer, 'chat_history': chat_history})
+    return JsonResponse({'error': 'Invalid request.'}, status=400)
+
 @csrf_exempt
 def rag_qa_view(request):
-    answer = None
+    if 'chat_history' not in request.session:
+        request.session['chat_history'] = []
+    chat_history = request.session['chat_history']
     if request.method == 'POST':
-        question = request.POST.get('question', '')
-        answer = ollama_rag_qa(question)
-    return render(request, 'observations/rag_qa.html', {'answer': answer})
+        question = request.POST.get('question', '').strip()
+        if question:
+            chat_history.append({'role': 'user', 'content': question})
+            answer = ollama_rag_qa_web(question)
+            user_lang = request.session.get('language', 'en')
+            if user_lang == 'ur':
+                translated = libretranslate(answer, source_lang="en", target_lang="ur")
+                if translated != answer:
+                    answer = translated
+            chat_history.append({'role': 'bot', 'content': answer})
+            request.session['chat_history'] = chat_history
+    if request.GET.get('clear'):
+        chat_history.clear()
+        request.session['chat_history'] = chat_history
+    return render(request, 'observations/rag_qa.html', {'chat_history': chat_history})
+
+@login_required
+def dashboard(request):
+    # Get user's observations
+    user_observations = Observation.objects.filter(user=request.user).order_by('-created_at')[:5]
+    user_observations_count = Observation.objects.filter(user=request.user).count()
+    
+    # Get total validations received by user's observations
+    total_validations = Observation.objects.filter(user=request.user).aggregate(
+        total=Count('community_validations'))['total'] or 0
+    
+    # Get observations that need validation (excluding user's own observations)
+    observations_needing_validation = Observation.objects.exclude(
+        user=request.user
+    ).order_by('-created_at')[:5]
+    
+    # Get user's badge
+    badge = request.user.badge if hasattr(request.user, 'badge') else 'Novice'
+    
+    context = {
+        'user_observations': user_observations,
+        'user_observations_count': user_observations_count,
+        'total_validations': total_validations,
+        'observations_needing_validation': observations_needing_validation,
+        'badge': badge,
+    }
+    
+    return render(request, 'observations/dashboard.html', context)
+
+def observation_detail(request, pk):
+    observation = get_object_or_404(Observation, pk=pk)
+    
+    # Get similar observations (same species, excluding current observation)
+    similar_observations = Observation.objects.filter(
+        species_name=observation.species_name
+    ).exclude(
+        pk=observation.pk
+    ).order_by('-date_observed')[:5]
+    
+    # Check if user has already validated this observation
+    has_validated = False
+    if request.user.is_authenticated:
+        has_validated = request.session.get(f'validated_{pk}', False)
+    
+    context = {
+        'observation': observation,
+        'similar_observations': similar_observations,
+        'has_validated': has_validated,
+        'can_validate': request.user.is_authenticated and request.user != observation.user and not has_validated
+    }
+    return render(request, 'observations/observation_detail.html', context)
+
+def home(request):
+    # Get recent observations for all users
+    recent_observations = Observation.objects.all().order_by('-created_at')[:5]
+    
+    context = {
+        'recent_observations': recent_observations,
+    }
+    return render(request, 'observations/home.html', context)

@@ -19,12 +19,14 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from users.views import set_language
+from observations.views import ObservationListView, dashboard
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('users.web_urls')),
-    path('observations/', include('observations.web_urls')),
+    path('', include('observations.urls')),
+    path('users/', include('users.urls')),
     path('api/users/', include('users.api_urls')),
     path('api/observations/', include('observations.api_urls')),
+    path('dashboard/', dashboard, name='dashboard'),  # Dashboard route
     path('set-language/', set_language, name='set_language'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

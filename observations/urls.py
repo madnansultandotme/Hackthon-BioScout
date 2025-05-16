@@ -1,12 +1,7 @@
-from django.urls import path
-from . import views
+from django.urls import path, include
+from . import web_urls
 
 urlpatterns = [
     # Web URLs
-    path('', views.ObservationListView.as_view(), name='observation_list'),
-    path('submit/', views.ObservationCreateView.as_view(), name='submit_observation'),
-    path('<int:pk>/', views.ObservationDetailView.as_view(), name='observation_detail'),
-    path('<int:pk>/edit/', views.ObservationUpdateView.as_view(), name='observation_edit'),
-    path('<int:pk>/delete/', views.ObservationDeleteView.as_view(), name='observation_delete'),
-    path('<int:pk>/validate/', views.validate_observation, name='validate_observation'),
+    *web_urls.urlpatterns,
 ] 

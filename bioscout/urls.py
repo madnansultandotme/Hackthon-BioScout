@@ -29,4 +29,9 @@ urlpatterns = [
     path('api/observations/', include('observations.api_urls')),
     path('dashboard/', dashboard, name='dashboard'),  # Dashboard route
     path('set-language/', set_language, name='set_language'),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# Serve static and media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

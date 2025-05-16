@@ -1,6 +1,6 @@
 from django import forms
 from django.utils import timezone
-from .models import Observation
+from .models import Observation, CorrectionRequest
 
 class ObservationForm(forms.ModelForm):
     class Meta:
@@ -56,4 +56,12 @@ class ObservationForm(forms.ModelForm):
                 raise forms.ValidationError('Image size must be less than 5MB')
             if not image.content_type.startswith('image/'):
                 raise forms.ValidationError('File must be an image')
-        return image 
+        return image
+
+class CorrectionRequestForm(forms.ModelForm):
+    class Meta:
+        model = CorrectionRequest
+        fields = ['message']
+        widgets = {
+            'message': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Describe the error or suggestion...'}),
+        } 

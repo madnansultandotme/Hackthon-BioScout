@@ -2,6 +2,12 @@
 {% load static %}
 {% block content %}
 <div class="container py-5">
+    <!-- Simple Observation Summary -->
+    <div class="alert alert-info mb-4">
+        <strong>Observation:</strong> {{ observation.species_name }} at {{ observation.location }} on {{ observation.date_observed }}
+        {% if observation.ai_suggestion %}<br><strong>AI Species ID:</strong> {{ observation.ai_suggestion }}{% endif %}
+        {% if observation.ai_confidence %}<span class="badge bg-info ms-2">Confidence: {{ observation.ai_confidence|floatformat:2 }}</span>{% endif %}
+    </div>
     <div class="row">
         <!-- Main Content -->
         <div class="col-lg-8">
@@ -67,6 +73,46 @@
                     </div>
                 </div>
             </div>
+            <!-- Correction Request (for non-owners) -->
+            {% if user.is_authenticated and user != observation.user %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="text-success mb-3"><i class="bi bi-exclamation-diamond"></i> Suggest a Correction</h5>
+                    <form method="post" action="{% url 'submit_correction_request' observation.pk %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <textarea name="message" class="form-control" rows="3" placeholder="Describe the error or suggestion..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-warning"><i class="bi bi-send"></i> Submit Correction Request</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            <!-- Correction Requests (for owner) -->
+            {% if user.is_authenticated and user == observation.user and correction_requests %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="text-success mb-3"><i class="bi bi-inbox"></i> Correction Requests</h5>
+                    <ul class="list-group">
+                        {% for req in correction_requests %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ req.requested_by }}</strong>: {{ req.message }}
+                                <span class="badge bg-secondary ms-2">{{ req.status|title }}</span>
+                                <small class="text-muted ms-2">{{ req.created_at|date:"Y-m-d H:i" }}</small>
+                            </div>
+                            {% if req.status == 'pending' %}
+                            <div>
+                                <a href="{% url 'review_correction_request' observation.pk req.id 'accept' %}" class="btn btn-success btn-sm">Accept</a>
+                                <a href="{% url 'review_correction_request' observation.pk req.id 'reject' %}" class="btn btn-danger btn-sm">Reject</a>
+                            </div>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Sidebar -->

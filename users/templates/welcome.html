@@ -1,65 +1,177 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container py-5">
-    <div class="row align-items-center">
-        <div class="col-md-6 text-center text-md-start">
-            <h1 class="display-3 fw-bold text-success mb-3">
-                <i class="bi bi-globe2"></i>
-                {% if request.session.language == 'ur' %}بایو اسکاوٹ اسلام آباد{% else %}BioScout Islamabad{% endif %}
-            </h1>
-            <p class="lead mb-4">
-                {% if request.session.language == 'ur' %}
-                    اسلام آباد اور مارگلہ ہلز کے لیے کمیونٹی حیاتیاتی تنوع پلیٹ فارم۔ AI، گیمنگ، اور جدید ٹیکنالوجی کے ساتھ دریافت کریں، سیکھیں اور حصہ ڈالیں!
-                {% else %}
-                    The community biodiversity platform for Islamabad & Margalla Hills. Discover, learn, and contribute with AI, gamification, and modern tech!
-                {% endif %}
-            </p>
-            <a href="{% url 'register' %}" class="btn btn-success btn-lg me-2 mb-2"><i class="bi bi-person-plus"></i> {% if request.session.language == 'ur' %}رجسٹر کریں{% else %}Register{% endif %}</a>
-            <a href="{% url 'observation_list' %}" class="btn btn-outline-success btn-lg mb-2"><i class="bi bi-binoculars"></i> {% if request.session.language == 'ur' %}مشاہدات دیکھیں{% else %}View Observations{% endif %}</a>
-            <a href="{% url 'rag_qa' %}" class="btn btn-primary btn-lg mb-2"><i class="bi bi-question-circle"></i> {% if request.session.language == 'ur' %}سوالات{% else %}Q&amp;A{% endif %}</a>
-        </div>
-        <div class="col-md-6 text-center">
-            <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80" alt="Margalla Hills" class="img-fluid rounded shadow-lg mb-4" style="max-height: 350px; object-fit: cover;">
-        </div>
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #198754 0%, #43cea2 100%);
+        color: #fff;
+        border-radius: 1.5rem;
+        box-shadow: 0 8px 32px rgba(25,135,84,0.10), 0 1.5px 6px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    .carousel-img {
+        height: 340px;
+        object-fit: cover;
+        border-radius: 1rem;
+    }
+    .section-title {
+        font-weight: 700;
+        color: #198754;
+        margin-bottom: 1.5rem;
+    }
+    .observation-card {
+        border-radius: 1rem;
+        box-shadow: 0 4px 16px rgba(25,135,84,0.08);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .observation-card:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 8px 32px rgba(25,135,84,0.15), 0 1.5px 6px rgba(0,0,0,0.08);
+    }
+    .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #198754;
+    }
+    .stat-card {
+        border-radius: 1rem;
+        background: #f8fafb;
+        box-shadow: 0 2px 8px rgba(25,135,84,0.06);
+        padding: 1.5rem 1rem;
+        text-align: center;
+    }
+</style>
+<div class="container py-4">
+    <!-- Hero Section -->
+    <div class="hero-section p-5 mb-5 text-center">
+        <h1 class="display-4 fw-bold mb-3"><i class="bi bi-globe2"></i> BioScout Islamabad</h1>
+        <p class="lead mb-4">The community biodiversity platform for Islamabad & Margalla Hills. Discover, learn, and contribute with AI, gamification, and modern tech!</p>
+        {% if not user.is_authenticated %}
+        <a href="{% url 'register' %}" class="btn btn-light btn-lg me-2 mb-2"><i class="bi bi-person-plus"></i> Register</a>
+        {% endif %}
+        <a href="{% url 'observation_list' %}" class="btn btn-outline-light btn-lg mb-2"><i class="bi bi-binoculars"></i> View Observations</a>
+        <a href="{% url 'rag_qa' %}" class="btn btn-primary btn-lg mb-2"><i class="bi bi-question-circle"></i> Q&amp;A</a>
     </div>
-    <div class="row mt-5">
+
+    <!-- Featured Observations Carousel -->
+    <h2 class="section-title text-center"><i class="bi bi-stars"></i> Featured Observations</h2>
+    <div id="featuredCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            {% for obs_pair in featured_observations|slice:":"|make_list|batch:2 %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <div class="row justify-content-center align-items-center">
+                    {% for obs in obs_pair %}
+                    <div class="col-md-6 text-center mb-4 mb-md-0">
+                        <a href="{% url 'observation_detail' obs.pk %}" class="text-decoration-none">
+                        {% if obs.image %}
+                        <img src="{{ obs.image.url }}" class="carousel-img mb-3" alt="{{ obs.species_name }}">
+                        {% else %}
+                        <div class="bg-light d-flex align-items-center justify-content-center carousel-img mb-3">
+                            <i class="bi bi-image text-muted" style="font-size: 4rem;"></i>
+                        </div>
+                        {% endif %}
+                        <h4 class="fw-bold text-success">{{ obs.species_name }}</h4>
+                        <p class="mb-1"><i class="bi bi-geo-alt"></i> {{ obs.location }}</p>
+                        <p class="mb-1"><i class="bi bi-calendar"></i> {{ obs.date_observed }}</p>
+                        <p class="mb-1"><i class="bi bi-lightbulb"></i> AI Suggestion: {{ obs.ai_suggestion }}</p>
+                        <span class="badge bg-success">{{ obs.community_validations }} Validations</span>
+                        <div class="mt-2 small text-muted">Observed by <strong>{{ obs.user }}</strong></div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="carousel-item active">
+                <div class="text-center text-muted py-5">No featured observations yet.</div>
+            </div>
+            {% endfor %}
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+
+    <!-- Recent Observations Grid -->
+    <h2 class="section-title text-center"><i class="bi bi-clock-history"></i> Recent Observations</h2>
+    <div class="row g-4 mb-5">
+        {% for obs in recent_observations %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{% url 'observation_detail' obs.pk %}" class="text-decoration-none">
+            <div class="card observation-card h-100">
+                {% if obs.image %}
+                <img src="{{ obs.image.url }}" class="card-img-top" alt="Image of {{ obs.species_name }}" style="max-height: 220px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title text-success">{{ obs.species_name }}</h5>
+                    <p class="card-text mb-1"><i class="bi bi-geo-alt"></i> <strong>Location:</strong> {{ obs.location }}</p>
+                    <p class="card-text mb-1"><i class="bi bi-calendar"></i> <strong>Date:</strong> {{ obs.date_observed }}</p>
+                    <p class="card-text mb-1"><i class="bi bi-lightbulb"></i> <strong>AI Suggestion:</strong> {{ obs.ai_suggestion }}</p>
+                    <span class="badge bg-success fs-6">{{ obs.community_validations }} Validations</span>
+                </div>
+                <div class="card-footer bg-white border-0 text-end">
+                    <small class="text-muted">Observed by <strong>{{ obs.user }}</strong></small>
+                </div>
+            </div>
+            </a>
+        </div>
+        {% empty %}
         <div class="col-12 text-center">
-            <h2 class="fw-bold text-secondary mb-3">{% if request.session.language == 'ur' %}اہم خصوصیات{% else %}Key Features{% endif %}</h2>
+            <p class="text-muted">No recent observations yet. Be the first to contribute!</p>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <i class="bi bi-person-badge display-4 text-success mb-2"></i>
-                    <h5 class="card-title">{% if request.session.language == 'ur' %}پروفائلز & بیجز{% else %}Profiles & Badges{% endif %}</h5>
-                    <p class="card-text small">{% if request.session.language == 'ur' %}گیمنگ اور کمیونٹی بیجز کے ساتھ حصہ ڈالیں{% else %}Contribute and earn badges for top observation and validation!{% endif %}</p>
+        {% endfor %}
+    </div>
+
+    <!-- Top Validators & Most Active Observers -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-6">
+            <div class="stat-card h-100">
+                <h4 class="text-success mb-3"><i class="bi bi-patch-check"></i> Top Validators</h4>
+                {% for user in top_validators %}
+                <div class="d-flex align-items-center mb-3">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" class="avatar me-3 border border-success" alt="Avatar">
+                    {% elif user.avatar_url %}
+                        <img src="{{ user.avatar_url }}" class="avatar me-3 border border-success" alt="Avatar">
+                    {% else %}
+                        <img src="https://img.icons8.com/color/48/000000/leaf.png" class="avatar me-3 border border-success" alt="Avatar">
+                    {% endif %}
+                    <div>
+                        <strong class="text-success">{{ user.username }}</strong><br>
+                        <span class="badge bg-success">{{ user.validations_count }} Validations</span>
+                    </div>
                 </div>
+                {% empty %}
+                <div class="text-muted">No validators yet.</div>
+                {% endfor %}
             </div>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <i class="bi bi-camera2 display-4 text-success mb-2"></i>
-                    <h5 class="card-title">{% if request.session.language == 'ur' %}AI مشاہدہ{% else %}AI Observation{% endif %}</h5>
-                    <p class="card-text small">{% if request.session.language == 'ur' %}AI کی مدد سے انواع کی شناخت اور کمیونٹی توثیق{% else %}AI-powered species ID and community validation.{% endif %}</p>
+        <div class="col-md-6">
+            <div class="stat-card h-100">
+                <h4 class="text-success mb-3"><i class="bi bi-people"></i> Most Active Observers</h4>
+                {% for user in top_observers %}
+                <div class="d-flex align-items-center mb-3">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" class="avatar me-3 border border-success" alt="Avatar">
+                    {% elif user.avatar_url %}
+                        <img src="{{ user.avatar_url }}" class="avatar me-3 border border-success" alt="Avatar">
+                    {% else %}
+                        <img src="https://img.icons8.com/color/48/000000/leaf.png" class="avatar me-3 border border-success" alt="Avatar">
+                    {% endif %}
+                    <div>
+                        <strong class="text-success">{{ user.username }}</strong><br>
+                        <span class="badge bg-primary">{{ user.observations_count }} Observations</span>
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <i class="bi bi-translate display-4 text-success mb-2"></i>
-                    <h5 class="card-title">{% if request.session.language == 'ur' %}اردو/انگریزی{% else %}Urdu/English{% endif %}</h5>
-                    <p class="card-text small">{% if request.session.language == 'ur' %}دو لسانی انٹرفیس اور سوالات{% else %}Bilingual interface and Q&A for all users.{% endif %}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <i class="bi bi-cloud-arrow-down display-4 text-success mb-2"></i>
-                    <h5 class="card-title">{% if request.session.language == 'ur' %}PWA/آف لائن{% else %}PWA/Offline{% endif %}</h5>
-                    <p class="card-text small">{% if request.session.language == 'ur' %}ایپ کو انسٹال کریں اور آف لائن استعمال کریں{% else %}Install as an app and use offline!{% endif %}</p>
-                </div>
+                {% empty %}
+                <div class="text-muted">No active observers yet.</div>
+                {% endfor %}
             </div>
         </div>
     </div>

@@ -4,9 +4,9 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
-from .models import Observation
-from .forms import ObservationForm
-from django.db.models import Count
+from .models import Observation, CorrectionRequest
+from .forms import ObservationForm, CorrectionRequestForm
+from django.db.models import Count, Sum
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -142,16 +142,20 @@ class ObservationUpdateView(UpdateView):
     success_url = reverse_lazy('observation_list')
 
     def get_queryset(self):
-        return Observation.objects.filter(observer=self.request.user)
+        return Observation.objects.filter(user=self.request.user)
 
 @method_decorator(login_required, name='dispatch')
 class ObservationDeleteView(DeleteView):
     model = Observation
-    success_url = reverse_lazy('observation_list')
+    success_url = reverse_lazy('home')
     template_name = 'observations/observation_confirm_delete.html'
 
     def get_queryset(self):
-        return Observation.objects.filter(observer=self.request.user)
+        return Observation.objects.filter(user=self.request.user)
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Observation deleted successfully!')
+        return super().delete(request, *args, **kwargs)
 
 def popular_observations(request):
     observations = Observation.objects.order_by('-community_validations')[:6]
@@ -379,6 +383,47 @@ def dashboard(request):
     
     return render(request, 'observations/dashboard.html', context)
 
+@login_required
+def submit_correction_request(request, pk):
+    observation = get_object_or_404(Observation, pk=pk)
+    if request.user == observation.user:
+        messages.error(request, "You cannot request a correction on your own observation.")
+        return redirect('observation_detail', pk=pk)
+    if request.method == 'POST':
+        form = CorrectionRequestForm(request.POST)
+        if form.is_valid():
+            correction = form.save(commit=False)
+            correction.observation = observation
+            correction.requested_by = request.user
+            correction.save()
+            messages.success(request, "Correction request submitted.")
+            return redirect('observation_detail', pk=pk)
+    else:
+        form = CorrectionRequestForm()
+    return render(request, 'observations/submit_correction.html', {'form': form, 'observation': observation})
+
+@login_required
+def review_correction_request(request, pk, req_id, action):
+    observation = get_object_or_404(Observation, pk=pk)
+    correction = get_object_or_404(CorrectionRequest, pk=req_id, observation=observation)
+    if request.user != observation.user:
+        messages.error(request, "Only the observation owner can review correction requests.")
+        return redirect('observation_detail', pk=pk)
+    if correction.status != 'pending':
+        messages.info(request, "This correction request has already been reviewed.")
+        return redirect('observation_detail', pk=pk)
+    if action == 'accept':
+        correction.status = 'accepted'
+        correction.reviewed_at = timezone.now()
+        correction.save()
+        messages.success(request, "Correction request accepted.")
+    elif action == 'reject':
+        correction.status = 'rejected'
+        correction.reviewed_at = timezone.now()
+        correction.save()
+        messages.success(request, "Correction request rejected.")
+    return redirect('observation_detail', pk=pk)
+
 def observation_detail(request, pk):
     observation = get_object_or_404(Observation, pk=pk)
     
@@ -394,19 +439,44 @@ def observation_detail(request, pk):
     if request.user.is_authenticated:
         has_validated = request.session.get(f'validated_{pk}', False)
     
+    # Correction requests (only for owner)
+    correction_requests = []
+    if request.user.is_authenticated and request.user == observation.user:
+        correction_requests = observation.correction_requests.all().order_by('-created_at')
+    
     context = {
         'observation': observation,
         'similar_observations': similar_observations,
         'has_validated': has_validated,
-        'can_validate': request.user.is_authenticated and request.user != observation.user and not has_validated
+        'can_validate': request.user.is_authenticated and request.user != observation.user and not has_validated,
+        'correction_requests': correction_requests,
     }
     return render(request, 'observations/observation_detail.html', context)
 
 def home(request):
-    # Get recent observations for all users
-    recent_observations = Observation.objects.all().order_by('-created_at')[:5]
-    
+    from django.db.models import Count, Sum
+    from users.models import User
+    from .models import Observation
+
+    # Featured: top 5 by validations
+    featured_observations = Observation.objects.order_by('-community_validations', '-created_at')[:5]
+    # Recent: latest 6
+    recent_observations = Observation.objects.order_by('-created_at')[:6]
+
+    # Top Validators: users who validated the most (by sum of validations on others' observations)
+    top_validators = (
+        User.objects.annotate(validations_count=Sum('observations__community_validations'))
+        .order_by('-validations_count')[:5]
+    )
+    # Top Observers: users with most observations
+    top_observers = (
+        User.objects.annotate(observations_count=Count('observations'))
+        .order_by('-observations_count')[:5]
+    )
     context = {
+        'featured_observations': featured_observations,
         'recent_observations': recent_observations,
+        'top_validators': top_validators,
+        'top_observers': top_observers,
     }
-    return render(request, 'observations/home.html', context)
+    return render(request, 'welcome.html', context)

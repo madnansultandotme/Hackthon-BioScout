@@ -38,3 +38,14 @@ class Observation(models.Model):
 
     def __str__(self):
         return f"{self.species_name} ({self.location}) by {self.user.username}"
+
+class CorrectionRequest(models.Model):
+    observation = models.ForeignKey(Observation, on_delete=models.CASCADE, related_name='correction_requests')
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_correction_requests')
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('rejected', 'Rejected')], default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Correction for {self.observation} by {self.requested_by.username} ({self.status})"

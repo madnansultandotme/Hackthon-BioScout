@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row align-items-center">
+        <div class="col-md-6 text-center text-md-start">
+            <h1 class="display-3 fw-bold text-success mb-3">
+                <i class="bi bi-globe2"></i>
+                {% if request.session.language == 'ur' %}بایو اسکاوٹ اسلام آباد{% else %}BioScout Islamabad{% endif %}
+            </h1>
+            <p class="lead mb-4">
+                {% if request.session.language == 'ur' %}
+                    اسلام آباد اور مارگلہ ہلز کے لیے کمیونٹی حیاتیاتی تنوع پلیٹ فارم۔ AI، گیمنگ، اور جدید ٹیکنالوجی کے ساتھ دریافت کریں، سیکھیں اور حصہ ڈالیں!
+                {% else %}
+                    The community biodiversity platform for Islamabad & Margalla Hills. Discover, learn, and contribute with AI, gamification, and modern tech!
+                {% endif %}
+            </p>
+            <a href="{% url 'register' %}" class="btn btn-success btn-lg me-2 mb-2"><i class="bi bi-person-plus"></i> {% if request.session.language == 'ur' %}رجسٹر کریں{% else %}Register{% endif %}</a>
+            <a href="{% url 'observation_list' %}" class="btn btn-outline-success btn-lg mb-2"><i class="bi bi-binoculars"></i> {% if request.session.language == 'ur' %}مشاہدات دیکھیں{% else %}View Observations{% endif %}</a>
+            <a href="{% url 'rag_qa' %}" class="btn btn-primary btn-lg mb-2"><i class="bi bi-question-circle"></i> {% if request.session.language == 'ur' %}سوالات{% else %}Q&amp;A{% endif %}</a>
+        </div>
+        <div class="col-md-6 text-center">
+            <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80" alt="Margalla Hills" class="img-fluid rounded shadow-lg mb-4" style="max-height: 350px; object-fit: cover;">
+        </div>
+    </div>
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <h2 class="fw-bold text-secondary mb-3">{% if request.session.language == 'ur' %}اہم خصوصیات{% else %}Key Features{% endif %}</h2>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-badge display-4 text-success mb-2"></i>
+                    <h5 class="card-title">{% if request.session.language == 'ur' %}پروفائلز & بیجز{% else %}Profiles & Badges{% endif %}</h5>
+                    <p class="card-text small">{% if request.session.language == 'ur' %}گیمنگ اور کمیونٹی بیجز کے ساتھ حصہ ڈالیں{% else %}Contribute and earn badges for top observation and validation!{% endif %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-camera2 display-4 text-success mb-2"></i>
+                    <h5 class="card-title">{% if request.session.language == 'ur' %}AI مشاہدہ{% else %}AI Observation{% endif %}</h5>
+                    <p class="card-text small">{% if request.session.language == 'ur' %}AI کی مدد سے انواع کی شناخت اور کمیونٹی توثیق{% else %}AI-powered species ID and community validation.{% endif %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-translate display-4 text-success mb-2"></i>
+                    <h5 class="card-title">{% if request.session.language == 'ur' %}اردو/انگریزی{% else %}Urdu/English{% endif %}</h5>
+                    <p class="card-text small">{% if request.session.language == 'ur' %}دو لسانی انٹرفیس اور سوالات{% else %}Bilingual interface and Q&A for all users.{% endif %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-cloud-arrow-down display-4 text-success mb-2"></i>
+                    <h5 class="card-title">{% if request.session.language == 'ur' %}PWA/آف لائن{% else %}PWA/Offline{% endif %}</h5>
+                    <p class="card-text small">{% if request.session.language == 'ur' %}ایپ کو انسٹال کریں اور آف لائن استعمال کریں{% else %}Install as an app and use offline!{% endif %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

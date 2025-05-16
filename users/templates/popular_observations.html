@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow mb-4">
+        <div class="card-body bg-light">
+            <h2 class="card-title text-success"><i class="bi bi-stars"></i> {% if request.session.language == 'ur' %}نمایاں مشاہدات{% else %}Featured Observations{% endif %}</h2>
+            <div class="row">
+                {% for obs in popular_observations %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 border-success shadow">
+                        {% if obs.image %}
+                        <img src="{{ obs.image.url }}" class="card-img-top" alt="Observation Image">
+                        {% else %}
+                        <img src="https://img.icons8.com/color/96/000000/leaf.png" class="card-img-top" alt="No Image">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ obs.species_name }}</h5>
+                            <p class="card-text"><strong>{% if request.session.language == 'ur' %}مقام{% else %}Location{% endif %}:</strong> {{ obs.location }}</p>
+                            <p class="card-text"><strong>{% if request.session.language == 'ur' %}تاریخ{% else %}Date{% endif %}:</strong> {{ obs.date_observed }}</p>
+                            <p class="card-text"><strong>{% if request.session.language == 'ur' %}AI تجویز{% else %}AI Suggestion{% endif %}:</strong> {{ obs.ai_suggestion }}</p>
+                            <p class="card-text"><strong>{% if request.session.language == 'ur' %}کمیونٹی توثیق{% else %}Community Validations{% endif %}:</strong> <span class="badge bg-success">{{ obs.community_validations }}</span></p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- Hero Section -->
+<div class="hero bg-success text-white text-center py-5 mb-4 shadow-lg rounded">
+    <h1 class="display-3 fw-bold mb-3">Welcome to BioScout Islamabad</h1>
+    <p class="lead mb-4">Discover, validate, and celebrate biodiversity in Islamabad & Margalla Hills.<br>Join the community, submit your own observations, and help validate others!</p>
+    {% if user.is_authenticated %}
+        <a href="{% url 'submit_observation' %}" class="btn btn-warning btn-lg me-2"><i class="bi bi-plus-circle"></i> Submit Observation</a>
+        <a href="{% url 'profile' %}" class="btn btn-outline-light btn-lg"><i class="bi bi-person-circle"></i> My Profile</a>
+    {% else %}
+        <a href="{% url 'register' %}" class="btn btn-warning btn-lg me-2"><i class="bi bi-person-plus"></i> Register</a>
+        <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg"><i class="bi bi-box-arrow-in-right"></i> Login</a>
+    {% endif %}
+</div>
+
+<!-- Featured Observations Slider -->
+<div class="container mb-5">
+    <h2 class="text-success mb-4 text-center">Featured Observations</h2>
+    <div id="featuredCarousel" class="carousel slide shadow-lg rounded" data-bs-ride="carousel">
+        <div class="carousel-indicators">
+            {% for obs in popular_observations %}
+                <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="{{ forloop.counter0 }}" {% if forloop.first %}class="active"{% endif %}></button>
+            {% endfor %}
+        </div>
+        <div class="carousel-inner rounded">
+            {% for obs in popular_observations %}
+                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    {% if obs.image %}
+                        <img src="{{ obs.image.url }}" class="d-block w-100" alt="{{ obs.species_name }}" style="height: 400px; object-fit: cover;">
+                    {% else %}
+                        <div class="d-block w-100 bg-light" style="height: 400px; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-image text-muted" style="font-size: 4rem;"></i>
+                        </div>
+                    {% endif %}
+                    <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-75 rounded p-3">
+                        <h5 class="text-warning">{{ obs.species_name }}</h5>
+                        <p class="mb-1"><i class="bi bi-geo-alt"></i> {{ obs.location }}</p>
+                        <p class="mb-1"><i class="bi bi-calendar"></i> {{ obs.date_observed }}</p>
+                        <p class="mb-1"><i class="bi bi-lightbulb"></i> AI Suggestion: {{ obs.ai_suggestion }}</p>
+                        <span class="badge bg-success">{{ obs.community_validations }} Validations</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+</div>
+
+<!-- Popular Observations Grid -->
+<div class="container pb-5">
+    <h2 class="text-success mb-4 text-center">Most Popular Observations</h2>
+    <div class="row justify-content-center g-4">
+        {% for obs in popular_observations %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow h-100 border-0 observation-card" style="transition: transform 0.2s;">
+                {% if obs.image %}
+                <img src="{{ obs.image.url }}" class="card-img-top" alt="Image of {{ obs.species_name }}" style="max-height: 220px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title text-success">{{ obs.species_name }}</h5>
+                    <p class="card-text mb-1"><i class="bi bi-geo-alt"></i> <strong>Location:</strong> {{ obs.location }}</p>
+                    <p class="card-text mb-1"><i class="bi bi-calendar"></i> <strong>Date:</strong> {{ obs.date_observed }}</p>
+                    <p class="card-text mb-1"><i class="bi bi-lightbulb"></i> <strong>AI Suggestion:</strong> {{ obs.ai_suggestion }}</p>
+                    <p class="card-text mb-1"><i class="bi bi-chat-left-text"></i> <strong>Notes:</strong> {{ obs.notes|default:'-' }}</p>
+                    <span class="badge bg-success fs-6">{{ obs.community_validations }} Validations</span>
+                </div>
+                <div class="card-footer bg-white border-0 text-end">
+                    <small class="text-muted">Observed by <strong>{{ obs.user }}</strong></small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center">
+            <p class="text-muted">No observations yet. Be the first to contribute!</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.observation-card:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 8px 32px rgba(25,135,84,0.15), 0 1.5px 6px rgba(0,0,0,0.08);
+}
+.carousel-caption {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background: rgba(0,0,0,0.7);
+}
+</style>
+{% endblock %} 

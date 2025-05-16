@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body bg-light">
+            <h2 class="card-title text-primary"><i class="bi bi-question-circle"></i> {% if request.session.language == 'ur' %}حیاتیاتی سوالات (RAG سسٹم){% else %}Biodiversity Q&amp;A (RAG System){% endif %}</h2>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="question" class="form-label">{% if request.session.language == 'ur' %}اسلام آباد یا مارگلہ ہلز کی حیاتیاتی تنوع کے بارے میں سوال پوچھیں:{% else %}Ask a question about Islamabad or Margalla Hills biodiversity:{% endif %}</label>
+                    <input type="text" class="form-control" id="question" name="question" required placeholder="{% if request.session.language == 'ur' %}مثال: مارگلہ ہلز میں عام پرندے کون سے ہیں؟{% else %}e.g. What birds are common in Margalla Hills?{% endif %}">
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> {% if request.session.language == 'ur' %}پوچھیں{% else %}Ask{% endif %}</button>
+            </form>
+            {% if answer %}
+                <div class="alert alert-info mt-4"><strong>{% if request.session.language == 'ur' %}جواب:{% else %}Answer:{% endif %}</strong> {{ answer }}</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

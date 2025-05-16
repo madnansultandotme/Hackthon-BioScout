@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg p-4 mb-4" style="border-top: 5px solid #198754;">
+                <h2 class="text-success mb-3"><i class="bi bi-person-circle"></i> Profile</h2>
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                {% if badges %}
+                    <p><strong>Badges:</strong>
+                        {% for badge in badges %}
+                            <span class="badge bg-warning text-dark">{{ badge|default:"" }}</span>
+                        {% endfor %}
+                    </p>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-success">Update Profile</button>
+                </form>
+                <a href="{% url 'logout' %}" class="btn btn-secondary mt-3">Logout</a>
+            </div>
+        </div>
+    </div>
+    {% if user_observations %}
+        <h3 class="mt-5 mb-3 text-success text-center">Your Observations</h3>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
+                <thead class="table-success">
+                    <tr>
+                        <th>Species</th>
+                        <th>Date</th>
+                        <th>Location</th>
+                        <th>AI Suggestion</th>
+                        <th>Validations</th>
+                        <th>Image</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obs in user_observations %}
+                    <tr>
+                        <td>{{ obs.species_name }}</td>
+                        <td>{{ obs.date_observed }}</td>
+                        <td>{{ obs.location }}</td>
+                        <td>{{ obs.ai_suggestion }}</td>
+                        <td><span class="badge bg-success">{{ obs.community_validations }}</span></td>
+                        <td>
+                            {% if obs.image %}
+                                <img src="{{ obs.image.url }}" alt="Image" width="60" class="rounded shadow"/>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>{{ obs.notes }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted mt-4 text-center">You have not submitted any observations yet.</p>
+    {% endif %}
+</div>
+{% endblock %} 

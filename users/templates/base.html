@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioScout</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#198754">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light shadow">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center" href="{% url 'popular_observations' %}">
+            <img src="https://img.icons8.com/color/48/000000/leaf.png" width="32" class="me-2"/>
+            <span>BioScout</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                {% if user.is_authenticated %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'profile' %}">{% if request.session.language == 'ur' %}پروفائل{% else %}Profile{% endif %}</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'observation_list' %}">{% if request.session.language == 'ur' %}مشاہدات{% else %}Observations{% endif %}</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'rag_qa' %}">{% if request.session.language == 'ur' %}سوالات{% else %}Q&amp;A{% endif %}</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">{% if request.session.language == 'ur' %}لاگ آؤٹ{% else %}Logout{% endif %}</a></li>
+                {% else %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">{% if request.session.language == 'ur' %}رجسٹر کریں{% else %}Register{% endif %}</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">{% if request.session.language == 'ur' %}لاگ ان{% else %}Login{% endif %}</a></li>
+                {% endif %}
+                <li class="nav-item">
+                    <form method="post" action="{% url 'set_language' %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="lang" value="{% if request.session.language == 'ur' %}en{% else %}ur{% endif %}">
+                        <button type="submit" class="btn btn-link nav-link">{% if request.session.language == 'ur' %}English{% else %}اردو{% endif %}</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<div class="hero bg-success text-white text-center py-5 mb-4 shadow">
+    <h1 class="display-4">{% if request.session.language == 'ur' %}بایو اسکاوٹ اسلام آباد{% else %}BioScout Islamabad{% endif %}</h1>
+    <p class="lead">{% if request.session.language == 'ur' %}اسلام آباد اور مارگلہ ہلز کی حیاتیاتی تنوع کی کمیونٹی{% else %}Community Biodiversity Hub for Islamabad & Margalla Hills{% endif %}</p>
+</div>
+<div class="container mt-4">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

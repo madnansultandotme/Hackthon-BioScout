@@ -1,115 +1,114 @@
-# BioScout Islamabad
+# BioScout: Biodiversity Observation Platform
 
-**AI for Community Biodiversity & Sustainable Insights**
-
----
-
-## 🌱 Overview
-BioScout Islamabad is a community-driven, AI-powered web platform for biodiversity observation, education, and Q&A, focused on Islamabad and the Margalla Hills. Built for hackathons, it combines modern web tech, advanced RAG (Retrieval Augmented Generation) with Ollama (DeepSeek-r1), multilingual support, gamification, and PWA/offline capabilities.
+BioScout is a Django-based biodiversity observation platform with a modern Flutter mobile app. It enables users to submit, view, validate, and analyze species observations, with AI-powered species suggestions, multilingual support, and robust permission controls. The mobile app works offline and syncs data when online.
 
 ---
 
-## 🚀 Features
-- **User Registration & Profile Management** (with badges for top observers and validators)
-- **Biodiversity Observation Hub**
-  - Submit observations (species, date, location, image, notes)
-  - AI-powered species suggestion (mock/real)
-  - Community validation (upvote AI suggestions)
-  - Gamification: badges for top submitters and validators
-- **Observation List & Map**
-  - View all submissions with images, AI suggestions, and validation counts
-- **RAG-Enhanced Q&A System**
-  - Ask biodiversity questions (English/Urdu)
-  - Advanced RAG: context retrieval + Ollama DeepSeek-r1 LLM answers
-- **Multilingual UI** (English/Urdu toggle)
-- **PWA/Offline Support** (installable, works offline)
-- **Modern, Eye-Catching UI** (Bootstrap, icons, hero banners, cards)
+## Features
+
+### Web Platform (Django)
+- User registration, login, and profile management (with profile pictures)
+- Submit, update, and delete observations (with image upload)
+- AI-powered species suggestions for uploaded images
+- Validation and correction requests for observations
+- Multilingual support and chatbot (RAG-QA) with translation
+- Strong permission controls (only owners can edit/delete their observations)
+- Modern, responsive UI with Bootstrap
+- Landing page with featured observations, top validators, and most active observers
+- Static and media file handling
+
+### Mobile App (Flutter)
+- **Offline-first:** Observations are stored locally and synced with the server when online
+- User authentication (login, signup, logout)
+- Submit new observations with images (camera/gallery)
+- View list of all observations (with images, notes, sync status)
+- View detailed observation info (AI suggestions, validations, corrections)
+- Modern, responsive UI with green theme
+- Pull-to-refresh and smooth navigation
 
 ---
 
-## 🛠️ Setup & Installation
-1. **Clone the repo & install dependencies:**
+## Project Structure
+
+```
+/Django Backend
+├── bioscout/                # Django project settings
+├── users/                   # User management app
+├── observations/            # Observations app
+├── rag_knowledge_base/      # RAG-QA chatbot
+├── static/                  # Static files
+├── media/                   # Uploaded images
+├── db.sqlite3               # SQLite database
+├── manage.py
+
+/Flutter Mobile App
+└── bioscout_mobile/
+    ├── lib/
+    │   ├── main.dart
+    │   ├── screens/         # UI screens (login, register, home, add, details)
+    │   ├── providers/       # State management (auth, observation)
+    │   ├── services/        # API service
+    │   └── database/        # Local SQLite helper
+    ├── pubspec.yaml         # Flutter dependencies
+    └── ...
+```
+
+---
+
+## Getting Started
+
+### Django Backend
+1. **Install dependencies:**
    ```bash
-   git clone <your-repo-url>
-   cd <project-folder>
-   python -m venv venv
-   venv/Scripts/activate  # or source venv/bin/activate
    pip install -r requirements.txt
    ```
-2. **Install Ollama & DeepSeek-r1 model (for advanced RAG):**
-   - [Ollama install guide](https://ollama.com/download)
-   - Run: `ollama pull deepseek-coder:latest` (or `deepseek-r1`)
-   - Start Ollama: `ollama serve`
-3. **Run Django migrations:**
+2. **Apply migrations:**
    ```bash
-   python manage.py makemigrations
    python manage.py migrate
    ```
-4. **Create a superuser (optional):**
+3. **Create superuser (optional):**
    ```bash
    python manage.py createsuperuser
    ```
-5. **Run the server:**
+4. **Run the server:**
    ```bash
    python manage.py runserver
    ```
-6. **Access the app:**
-   - Web: [http://localhost:8000/](http://localhost:8000/)
-   - Swagger API: [http://localhost:8000/swagger/](http://localhost:8000/swagger/)
+
+### Flutter Mobile App
+1. **Install Flutter:** [Flutter Install Guide](https://docs.flutter.dev/get-started/install)
+2. **Install dependencies:**
+   ```bash
+   cd bioscout_mobile
+   flutter pub get
+   ```
+3. **Configure API URL:**
+   - Create a `.env` file in `bioscout_mobile/` with:
+     ```
+     API_URL=http://<your-server-ip>:8000
+     ```
+   - (For Android emulator, use `http://10.0.2.2:8000`)
+4. **Run the app:**
+   ```bash
+   flutter run
+   ```
 
 ---
 
-## 🌍 Demo Flow
-1. **Register/Login** (English or Urdu)
-2. **Submit an Observation** (species, image, notes, etc.)
-3. **See AI Suggestion & Validate** (upvote, earn badges)
-4. **Ask Biodiversity Questions** (Q&A, RAG with LLM, Urdu/English)
-5. **Switch Languages** (toggle in navbar)
-6. **Install as PWA** (add to home screen, demo offline)
-7. **View Profile & Badges**
+## Main Mobile App Features
+- **Authentication:** Secure login, registration, and logout
+- **Offline Observations:** Add observations offline; syncs automatically when online
+- **Image Upload:** Attach photos from camera or gallery
+- **Observation List:** View all observations with sync status
+- **Details View:** See all info, AI suggestions, validations, and corrections
+- **Modern UI:** Green theme, responsive design, smooth navigation
 
 ---
 
-## 📦 Project Structure
-- `users/` — User management, profiles, badges
-- `observations/` — Observation submission, validation, API, Q&A
-- `rag_knowledge_base/` — Knowledge base and FAQ for RAG
-- `manifest.json`, `sw.js` — PWA support
-- `templates/` — Bootstrap, multilingual, and modern UI
+## Contributing
+Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
 
 ---
 
-## 🤖 AI & RAG Details
-- **RAG Q&A:**
-  - Retrieves context from curated knowledge base and FAQ
-  - Sends context + question to Ollama (DeepSeek-r1) for expert answer
-  - Falls back to context-only answer if LLM is unavailable
-- **AI Species Suggestion:**
-  - Mocked for demo, can be replaced with real API/model
-
----
-
-## 🏆 Hackathon Tips
-- Highlight multilingual, PWA, and advanced RAG features
-- Show badges, validation, and community engagement
-- Demo offline install and Urdu/English toggle
-- Explain how the system can scale (add real AI, more languages, maps, etc.)
-
----
-
-## 📄 License
-MIT (or specify your own)
-
----
-
-## 🌐 Web vs. API Endpoints
-- **Web Endpoints (for browser/HCI):**
-  - `/profile/` — User profile (with observations, badges, etc.)
-  - `/observations/list/` — All observations (web)
-  - `/register/`, `/login/`, `/logout/` — Web auth
-  - `/rag-qa/` — Q&A (web)
-- **API Endpoints (for mobile/app):**
-  - `/api/users/profile/` — User profile (API, JSON)
-  - `/api/users/register/`, `/api/users/login/` — API auth
-  - `/observations/api/` — Observations API (list/create)
-  - `/observations/api/<id>/` — Observation detail (API) 
+## License
+[MIT](LICENSE) 

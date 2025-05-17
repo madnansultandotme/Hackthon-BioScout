@@ -20,6 +20,19 @@ from django.conf import settings
 from django.conf.urls.static import static
 from users.views import set_language
 from observations.views import ObservationListView, dashboard
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+from rest_framework import permissions
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="BioScout API",
+        default_version='v1',
+        description="API documentation for BioScout biodiversity platform",
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,6 +42,7 @@ urlpatterns = [
     path('api/observations/', include('observations.api_urls')),
     path('dashboard/', dashboard, name='dashboard'),  # Dashboard route
     path('set-language/', set_language, name='set_language'),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]
 
 # Serve static and media files in development

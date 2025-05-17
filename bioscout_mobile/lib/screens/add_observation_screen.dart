@@ -64,7 +64,8 @@ class _AddObservationScreenState extends State<AddObservationScreen> {
     });
 
     try {
-      await context.read<ObservationProvider>().submitObservation(
+      final observationProvider = context.read<ObservationProvider>();
+      await observationProvider.submitObservation(
         speciesName: _speciesController.text,
         dateObserved: _selectedDate.toIso8601String().split('T')[0],
         location: _locationController.text,

@@ -26,20 +26,21 @@ class AuthProvider with ChangeNotifier {
     _initialize();
   }
 
-  Future<void> _initialize() async {
-    try {
-      final storedToken = await _secureStorage.read(key: 'token');
-      if (storedToken != null) {
-        _token = storedToken;
-        _user = await _dbHelper.getUser();
-        _isAuthenticated = true;
-      }
-    } catch (e) {
-    } finally {
-      _isInitialized = true;
-      notifyListeners();
+Future<void> _initialize() async {
+  try {
+    final storedToken = await _secureStorage.read(key: 'token');
+    if (storedToken != null) {
+      _token = storedToken;
+      _user = await _dbHelper.getUser();
+      _isAuthenticated = true;
     }
+  } catch (e) {
+    debugPrint('Initialization error: $e');
+  } finally {
+    _isInitialized = true;
+    notifyListeners();
   }
+}
 
   Future<void> login(String username, String password) async {
     _isLoading = true;
@@ -78,6 +79,11 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+  Future<void> checkInitialization() async {
+  if (!_isInitialized) {
+    await _initialize();
+  }
+}
 
   Future<void> register({
     required String username,

@@ -16,7 +16,14 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     // Load observations when the screen is first created
-    Future.microtask(() => context.read<ObservationProvider>().loadObservations(context));
+    Future.microtask(() {
+      final observationProvider = context.read<ObservationProvider>();
+      final authProvider = context.read<AuthProvider>();
+      observationProvider.loadObservations(
+        isAuthenticated: authProvider.isAuthenticated,
+        token: authProvider.token,
+      );
+    });
   }
 
   @override
@@ -29,8 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await context.read<AuthProvider>().logout();
-              Navigator.pushReplacementNamed(context, '/login');
+              final authProvider = context.read<AuthProvider>();
+              await authProvider.logout();
+              if (mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
             },
           ),
         ],
@@ -72,7 +82,13 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           return RefreshIndicator(
-            onRefresh: () => provider.loadObservations(context),
+            onRefresh: () {
+              final authProvider = context.read<AuthProvider>();
+              return provider.loadObservations(
+                isAuthenticated: authProvider.isAuthenticated,
+                token: authProvider.token,
+              );
+            },
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: provider.observations.length,

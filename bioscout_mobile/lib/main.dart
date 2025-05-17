@@ -7,9 +7,11 @@ import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/add_observation_screen.dart';
 import 'screens/observation_details_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load();
   runApp(const MyApp());
 }
 
@@ -98,21 +100,27 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, _) {
-        if (!authProvider.isInitialized) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
+    final authProvider = context.read<AuthProvider>();
+    return FutureBuilder(
+      future: Future.delayed(Duration.zero, () => authProvider.checkInitialization()),
+      builder: (context, snapshot) {
+        return Consumer<AuthProvider>(
+          builder: (context, authProvider, _) {
+            if (!authProvider.isInitialized) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
 
-        if (authProvider.isAuthenticated) {
-          return const HomeScreen();
-        } else {
-          return const LoginScreen();
-        }
+            if (authProvider.isAuthenticated) {
+              return const HomeScreen();
+            } else {
+              return const LoginScreen();
+            }
+          },
+        );
       },
     );
   }

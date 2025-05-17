@@ -19,7 +19,7 @@ class ObservationProvider with ChangeNotifier {
 
   ObservationProvider();
 
-  Future<void> loadObservations(BuildContext context) async {
+  Future<void> loadObservations({required bool isAuthenticated, required String? token}) async {
     _isLoading = true;
     notifyListeners();
 
@@ -32,18 +32,15 @@ class ObservationProvider with ChangeNotifier {
       final connectivityResult = await Connectivity().checkConnectivity();
       if (connectivityResult != ConnectivityResult.none) {
         // Sync unsynced observations
-        await _syncUnsyncedObservations(context);
-        
-        // Load fresh data from API
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        if (authProvider.isAuthenticated) {
-          final apiObservations = await _apiService.getObservations(authProvider.token!);
+        await _syncUnsyncedObservations(isAuthenticated: isAuthenticated, token: token);
+        if (isAuthenticated && token != null) {
+          final apiObservations = await _apiService.getObservations(token);
           _observations = apiObservations.map((obs) => obs as Map<String, dynamic>).toList();
           notifyListeners();
         }
       }
     } catch (e) {
-      print('Error loading observations: $e');
+      debugPrint('Error loading observations: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -79,16 +76,21 @@ class ObservationProvider with ChangeNotifier {
       // Check connectivity
       final connectivityResult = await Connectivity().checkConnectivity();
       if (connectivityResult != ConnectivityResult.none) {
-        // Try to sync immediately
-        await _syncObservation(observation, context);
+        // Capture necessary values before await
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final bool isAuthenticated = authProvider.isAuthenticated;
+        final String? token = authProvider.token;
+        if (isAuthenticated && token != null) {
+          await _syncObservation(observation, token);
+        }
       }
     } catch (e) {
-      print('Error submitting observation: $e');
+      debugPrint('Error submitting observation: $e');
       rethrow;
     }
   }
 
-  Future<void> _syncUnsyncedObservations(BuildContext context) async {
+  Future<void> _syncUnsyncedObservations({required bool isAuthenticated, required String? token}) async {
     if (_isSyncing) return;
     _isSyncing = true;
     notifyListeners();
@@ -96,28 +98,27 @@ class ObservationProvider with ChangeNotifier {
     try {
       final unsynced = await _dbHelper.getUnsyncedObservations();
       for (var observation in unsynced) {
-        await _syncObservation(observation, context);
+        if (isAuthenticated && token != null) {
+          await _syncObservation(observation, token);
+        }
       }
     } catch (e) {
-      print('Error syncing observations: $e');
+      debugPrint('Error syncing observations: $e');
     } finally {
       _isSyncing = false;
       notifyListeners();
     }
   }
 
-  Future<void> _syncObservation(Map<String, dynamic> observation, BuildContext context) async {
+  Future<void> _syncObservation(Map<String, dynamic> observation, String token) async {
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      if (!authProvider.isAuthenticated) return;
-
       final response = await _apiService.submitObservation(
         observation['species_name'],
         observation['date_observed'],
         observation['location'],
         observation['notes'],
         observation['image_path'] != null ? File(observation['image_path']) : null,
-        authProvider.token!,
+        token,
       );
 
       // Mark as synced
@@ -130,7 +131,7 @@ class ObservationProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error syncing observation: $e');
+      debugPrint('Error syncing observation: $e');
     }
   }
 
@@ -140,7 +141,7 @@ class ObservationProvider with ChangeNotifier {
       _observations.removeWhere((obs) => obs['id'] == id);
       notifyListeners();
     } catch (e) {
-      print('Error deleting observation: $e');
+      debugPrint('Error deleting observation: $e');
       rethrow;
     }
   }

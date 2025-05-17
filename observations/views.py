@@ -36,6 +36,7 @@ import torch
 from PIL import Image
 from torchvision import transforms
 import tempfile
+import csv
 
 User = get_user_model()
 
@@ -218,32 +219,55 @@ class ObservationDetailAPI(generics.RetrieveAPIView):
     serializer_class = ObservationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-RAG_SNIPPETS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'snippets.txt')
-RAG_FAQ_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'faq_examples.txt')
+RAG_SNIPPETS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'snippets.csv')
+RAG_FAQ_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'faq_examples.csv')
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "llama3.2:1b"  # or 'deepseek-r1' if available:b
 # Helper to get context from knowledge base
 
 def get_rag_context(query):
+    # First check FAQ examples
     with open(RAG_FAQ_PATH, encoding='utf-8') as f:
-        lines = f.read().split('\n')
-    for i, line in enumerate(lines):
-        if line.lower().startswith('q:') and query.lower() in line.lower():
-            if i+1 < len(lines) and lines[i+1].lower().startswith('a:'):
-                return lines[i+1][2:].strip()
+        reader = csv.DictReader(f)
+        for row in reader:
+            if query.lower() in row['Question'].lower():
+                return row['Answer']
+    
+    # Then check biodiversity observations
+    with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'biodiversity_observations.csv'), encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        relevant_observations = []
+        for row in reader:
+            if (query.lower() in row['species_name'].lower() or 
+                query.lower() in row['common_name'].lower() or 
+                query.lower() in row['descriptive_notes'].lower()):
+                relevant_observations.append(f"Species: {row['common_name']} ({row['species_name']}) - {row['descriptive_notes']}")
+        if relevant_observations:
+            return "\n".join(relevant_observations)
+    
+    # Finally check general knowledge snippets
     with open(RAG_SNIPPETS_PATH, encoding='utf-8') as f:
-        snippets = f.read().split('\n\n')
-    for snippet in snippets:
-        if query.lower().split()[0] in snippet.lower():
-            return snippet.strip()
-    return "Margalla Hills is rich in biodiversity."
+        reader = csv.DictReader(f)
+        relevant_snippets = []
+        for row in reader:
+            if query.lower() in row['Snippet'].lower():
+                relevant_snippets.append(row['Snippet'])
+        if relevant_snippets:
+            return "\n\n".join(relevant_snippets)
+    
+    return "Margalla Hills is rich in biodiversity. The area supports diverse bird species, mammals, and plant life. For specific information, please try rephrasing your question."
 
 # Advanced RAG with Ollama
 
 def ollama_rag_qa(query):
     context = get_rag_context(query)
-    prompt = f"Context: {context}\n\nQuestion: {query}\n\nAnswer as an expert on Islamabad biodiversity:"
+    prompt = f"""Context: {context}
+
+Question: {query}
+
+Answer as an expert on Islamabad biodiversity. If the context contains specific observations, include relevant details about species, locations, and behaviors. If the context contains general information, provide a comprehensive overview. Keep the answer concise and informative:"""
+    
     try:
         response = requests.post(OLLAMA_URL, json={
             "model": OLLAMA_MODEL,
@@ -275,9 +299,10 @@ prompt = ChatPromptTemplate.from_template(SYSTEM_PROMPT)
 
 # Load your knowledge base (e.g., from text files)
 def load_knowledge_base():
-    kb_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'snippets.txt')
+    kb_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'rag_knowledge_base', 'snippets.csv')
     with open(kb_path, encoding='utf-8') as f:
-        docs = [Document(page_content=line.strip()) for line in f if line.strip()]
+        reader = csv.DictReader(f)
+        docs = [Document(page_content=row['Snippet']) for row in reader]
     vector_store.add_documents(docs)
 
 load_knowledge_base()
@@ -290,7 +315,7 @@ def ollama_rag_qa_web(question):
 
 LIBRETRANSLATE_URL = "http://localhost:5000/translate"
 
-def libretranslate(text, source_lang="auto", target_lang="en"):
+def libretranslate(text, source_lang="auto", target_lang="ur"):
     try:
         response = requests.post(
             LIBRETRANSLATE_URL,

@@ -182,8 +182,9 @@ class ApiService {
         } else {
           // Handle field-specific errors
           final errors = data.values
-              .where((value) => value is List)
-              .expand((list) => list as List)
+              .whereType<List>()
+              .expand((list) => list)
+              .whereType<String>()
               .join(', ');
           return errors.isNotEmpty ? errors : 'An error occurred';
         }
